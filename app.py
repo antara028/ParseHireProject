@@ -58,9 +58,8 @@ def send_email(to_email, subject, body):
 @app.route("/")
 def home():
     if "employer_email" not in session:
-        return render_template("landing.html")
+        return redirect(url_for("login"))
     return redirect(url_for("dashboard"))
-
 
 @app.route("/upload")
 def upload_form():
