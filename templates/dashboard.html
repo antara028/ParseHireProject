@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — ParseHire</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <img src="{{ url_for('static', filename='logo.jpg') }}" alt="ParseHire logo" class="logo-img">
+      <span class="brand">ParseHire</span>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <h1>Welcome back, {{ company_name }}.</h1>
+      <p>Your hiring activity from the last 30 days.</p>
+    </section>
+
+    <a href="{{ url_for('upload_form') }}" class="btn">+ New Job</a>
+
+    {% if jobs %}
+    <section class="results" style="margin-top:32px;">
+      {% for job in jobs %}
+      <div class="job-card">
+        <div class="job-card-menu">
+          <button type="button" class="kebab-btn" onclick="toggleJobMenu(event, {{ job.id }})">⋮</button>
+          <div class="job-menu-dropdown" id="job-menu-{{ job.id }}">
+            <form action="{{ url_for('delete_job_route', job_id=job.id) }}" method="post"
+                  onsubmit="return confirm('Delete this job and all its candidate data? This cannot be undone.');">
+              <button type="submit" class="job-menu-item job-menu-delete">Delete</button>
+            </form>
+          </div>
+        </div>
+
+        <a href="{{ url_for('job_detail', job_id=job.id) }}" class="job-card-link">
+          <div class="card-head">
+            <span class="filename">{{ job.role_title }}</span>
+          </div>
+          <div class="card-body">
+            <div class="detail-row">
+              <span class="detail-label">Candidates</span>
+              <span>{{ job.resume_count }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Posted</span>
+              <span>{{ job.created_at.strftime('%b %d, %Y') }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Breakdown</span>
+              <span class="tags">
+                <span class="tag" style="background: var(--good-bg); color: var(--good);">{{ job.strong_count }} strong</span>
+                <span class="tag" style="background: var(--mid-bg); color: var(--mid);">{{ job.moderate_count }} moderate</span>
+                <span class="tag" style="background: var(--bad-bg); color: var(--bad);">{{ job.weak_count }} weak</span>
+              </span>
+            </div>
+          </div>
+        </a>
+      </div>
+      {% endfor %}
+    </section>
+    {% else %}
+    <p style="margin-top:32px; color: var(--ink-soft);">No jobs yet — upload your first JD to get started.</p>
+    {% endif %}
+  </main>
+
+  <script>
+  function toggleJobMenu(event, jobId) {
+    event.preventDefault();
+    event.stopPropagation();
+    document.querySelectorAll('.job-menu-dropdown').forEach(menu => {
+      if (menu.id !== 'job-menu-' + jobId) menu.classList.remove('open');
+    });
+    document.getElementById('job-menu-' + jobId).classList.toggle('open');
+  }
+
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.job-menu-dropdown').forEach(menu => menu.classList.remove('open'));
+  });
+  </script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+flask
+flask-cors
+gunicorn
+pypdf
+pdfplumber
+python-docx
+sentence-transformers
+psycopg2-binary
+yake
+openai
+python-dotenv

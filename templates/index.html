@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume Match</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <header class="topbar">
+  <div class="topbar-inner">
+    <img src="{{ url_for('static', filename='logo.jpg') }}" alt="ParseHire logo" class="logo-img">
+    <span class="brand">ParseHire</span>
+  </div>
+</header>
+
+  <main class="wrap">
+
+    {% if job %}
+<a href="{{ url_for('dashboard') }}" class="back-link">← Back to Dashboard</a>
+<h1 class="job-role"><span class="job-role-label">Role :</span> {{ job.role_title or 'Not specified' }}</h1>
+{% endif %}
+
+    <section class="intro">
+      <h1>See who actually fits the role.</h1>
+      <p>Paste a job description, upload resumes, get a ranked, explainable match score for each candidate.</p>
+    </section>
+
+    {% if error %}
+      <div class="notice notice-error">{{ error }}</div>
+    {% endif %}
+
+    <form action="/process" method="post" enctype="multipart/form-data" class="panel">
+      <div class="field">
+  <label for="role_title">Role title</label>
+  <input type="text" id="role_title" name="role_title" placeholder="e.g. Data Analyst">
+</div>
+      <div class="field">
+        <label for="job_description">Job description</label>
+        <textarea id="job_description" name="job_description" rows="6"
+          placeholder="Paste the full job description here..."></textarea>
+      </div>
+
+                  <div class="field">
+        <label>Resumes (PDF or DOCX)</label>
+        <div id="dropzone" class="dropzone" tabindex="0">
+          <strong>Choose files</strong> or drag and drop files or a whole folder here
+          <div id="fileSummary" class="file-summary"></div>
+        </div>
+        <input type="file" id="resumes" name="resumes" accept=".pdf,.docx" multiple hidden>
+      </div>
+      <button type="submit" class="btn">Score candidates</button>
+    </form>
+
+    {% if results %}
+    <section class="dashboard">
+  <div class="tile tile-total" data-filter="all">
+    <span class="tile-count">{{ total_count }}</span>
+    <span class="tile-label">Total Resumes</span>
+  </div>
+  <div class="tile tile-strong" data-filter="high">
+    <span class="tile-count">{{ strong_count }}</span>
+    <span class="tile-label">Strong Match</span>
+  </div>
+  <div class="tile tile-moderate" data-filter="mid">
+    <span class="tile-count">{{ moderate_count }}</span>
+    <span class="tile-label">Moderate Match</span>
+  </div>
+  <div class="tile tile-weak" data-filter="low">
+    <span class="tile-count">{{ weak_count }}</span>
+    <span class="tile-label">Weak Match</span>
+  </div>
+</section>
+
+
+{% if skill_distribution %}
+<section class="skill-chart-section">
+  <h2>Skill Distribution <span class="count">(click a slice or requirement block)</span></h2>
+  <input type="text" id="skillSearch" class="skill-search" placeholder="Search a skill or requirement...">
+  <label class="match-mode-toggle">
+  <input type="checkbox" id="matchModeToggle">
+  Require ALL selected skills (instead of any)
+</label>
+  <div class="skill-chart-wrap">
+    <svg id="skillPie" viewBox="0 0 300 300" class="skill-pie"></svg>
+    <ul id="skillLegend" class="skill-legend"></ul>
+  </div>
+</section>
+<script id="skill-data" type="application/json">{{ skill_distribution | tojson }}</script>
+{% endif %}
+    <section class="results hidden" id="resultsSection">
+      <h2>Results <span class="count">({{ results|length }})</span></h2>
+
+
+      {% for r in results %}
+      <article class="card" data-tier="{{ 'high' if r.score >= 75 else 'mid' if r.score >= 50 else 'low' }}" data-filename="{{ r.filename }}" data-email="{{ r.email }}">
+        <div class="card-head">
+          <span class="filename">{{ r.filename }}</span>
+          <span class="score score-{{ 'high' if r.score >= 75 else 'mid' if r.score >= 50 else 'low' }}">
+            {{ r.score }}<span class="score-max">%</span>
+          </span>
+        </div>
+
+        <div class="card-body">
+          {% if r.email %}
+          <div class="detail-row">
+            <span class="detail-label">Email : </span>
+            <span>{{ r.email }}</span>
+          </div>
+          {% endif %}
+
+          {% if r.name %}
+          <div class="detail-row">
+            <span class="detail-label">Name : </span>
+            <span>{{ r.name }}</span>
+          </div>
+          {% endif %}
+
+          {% if r.message %}
+          <p class="note"><strong>{{ r.message }}</strong></p>
+          {% endif %}
+
+          {% if r.summary %}
+          <div class="detail-row">
+          <span class="detail-label">Summary : </span>
+            <span>{{ r.summary }}</span>
+          </div>
+          {% endif %}
+
+          {% if r.matched_requirements %}
+          <div class="detail-row">
+            <span class="detail-label">Matched : </span>
+            <span class="tags tags-matched">
+              {% for m in r.matched_requirements %}
+                <span class="tag">{{ m["requirement"] }} ({{ m["score"] }}%)</span>
+              {% endfor %}
+            </span>
+          </div>
+          {% endif %}
+
+          {% if r.missing_requirements %}
+          <div class="detail-row">
+            <span class="detail-label">Missing : </span>
+            <span class="tags tags-missing">
+              {% for s in r.missing_requirements %}<span class="tag">{{ s }}</span>{% endfor %}
+            </span>
+          </div>
+          {% endif %}
+
+          {% if r.career_trajectory %}
+          <div class="detail-row">
+            <span class="detail-label">Trajectory : </span>
+            <span>{{ r.career_trajectory.trend }} ({{ r.career_trajectory.trajectory_score }}%)</span>
+          </div>
+          {% endif %}
+
+          {% if r.experience %}
+          <div class="detail-row">
+            <span class="detail-label">Experience : </span>
+            <span>{{ r.experience.experience_display }} ({{ r.experience.experience_score }}%)</span>
+          </div>
+          {% endif %}
+        </div>
+      </article>
+      {% endfor %}
+       <nav id="pager" class="pager"></nav>
+    </section>
+    {% endif %}
+  <button id="proceedToTestBtn" class="btn btn-secondary hidden">Proceed to Test →</button>
+
+<div id="testReviewPanel" class="test-review-panel hidden">
+  <h3>Send test invites to:</h3>
+  <ul id="testReviewList" class="test-review-list"></ul>
+   <div class="field">
+    <label for="questionSetLink">Question set link (optional)</label>
+    <input type="url" id="questionSetLink" placeholder="e.g. a HackerRank test link or Google Form">
+  </div>
+  <div class="test-review-actions">
+    <button id="confirmSendBtn" class="btn">Send Invites</button>
+    <button id="cancelSendBtn" class="btn btn-ghost">Cancel</button>
+  </div>
+</div>
+  </main>
+ <script>
+
+  const PAGE_SIZE = 5;
+let currentPage = 1;
+
+function renderPage(page) {
+  const all = [...document.querySelectorAll('.card')];
+  const matching = all.filter(c => !c.classList.contains('is-filtered'));
+  const totalPages = Math.max(1, Math.ceil(matching.length / PAGE_SIZE));
+  currentPage = Math.min(Math.max(page || 1, 1), totalPages);
+  const start = (currentPage - 1) * PAGE_SIZE;
+
+  all.forEach(c => c.style.display = 'none');
+  matching.slice(start, start + PAGE_SIZE).forEach(c => c.style.display = '');
+  renderPager(totalPages, matching.length, start);
+}
+
+function renderPager(totalPages, totalItems, start) {
+  const pager = document.getElementById('pager');
+  if (!pager) return;
+  if (totalPages <= 1) { pager.innerHTML = ''; return; }
+
+  const pages = [];
+  for (let p = 1; p <= totalPages; p++) {
+    if (p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2) pages.push(p);
+    else if (pages[pages.length - 1] !== '…') pages.push('…');
+  }
+
+  let html = `<button class="pg-btn" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>‹ Prev</button>`;
+  pages.forEach(p => {
+    html += p === '…'
+      ? '<span class="pg-gap">…</span>'
+      : `<button class="pg-btn ${p === currentPage ? 'active' : ''}" data-page="${p}">${p}</button>`;
+  });
+  html += `<button class="pg-btn" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''}>Next ›</button>`;
+  html += `<div class="pg-info">Showing ${start + 1}–${Math.min(start + PAGE_SIZE, totalItems)} of ${totalItems}</div>`;
+  pager.innerHTML = html;
+}
+
+const pagerEl = document.getElementById('pager');
+if (pagerEl) {
+  pagerEl.addEventListener('click', e => {
+    const b = e.target.closest('.pg-btn');
+    if (!b || b.disabled) return;
+    renderPage(parseInt(b.dataset.page, 10));
+    document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+  });
+}
+renderPage(1);
+function clearActiveFilterBar() {
+  const bar = document.getElementById('activeFilterBar');
+  if (bar) bar.remove();
+}
+
+document.querySelectorAll('.tile').forEach(tile => {
+  tile.addEventListener('click', () => {
+    document.getElementById('resultsSection').classList.remove('hidden');
+     document.getElementById('proceedToTestBtn').classList.remove('hidden');
+    clearActiveFilterBar();
+    const filter = tile.dataset.filter;
+    document.querySelectorAll('.card').forEach(card => {
+       card.classList.toggle('is-filtered', !(filter === 'all' || card.dataset.tier === filter));
+    });
+    renderPage(1);
+  });
+});
+(function() {
+  const dataEl = document.getElementById('skill-data');
+  if (!dataEl) return;
+  const skillData = JSON.parse(dataEl.textContent);
+  const skills = Object.keys(skillData);
+  if (skills.length === 0) return;
+
+  const colors = ['#2563eb','#15803d','#b45309','#b91c1c','#7c3aed','#0891b2','#db2777','#4b5563','#ca8a04','#059669','#dc2626','#1d4ed8'];
+  const svg = document.getElementById('skillPie');
+  const legend = document.getElementById('skillLegend');
+  const matchModeToggle = document.getElementById('matchModeToggle');
+  const cx = 150, cy = 150, r = 130;
+  const total = skills.reduce((sum, s) => sum + skillData[s].length, 0);
+  const selectedSkills = new Set();
+
+  function polarToCartesian(cx, cy, r, angleDeg) {
+    const rad = angleDeg * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+
+  function describeArc(cx, cy, r, startAngle, endAngle) {
+    const start = polarToCartesian(cx, cy, r, endAngle);
+    const end = polarToCartesian(cx, cy, r, startAngle);
+    const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+    return ["M", cx, cy, "L", start.x, start.y, "A", r, r, 0, largeArcFlag, 0, end.x, end.y, "Z"].join(" ");
+  }
+
+  function clearActiveFilterBar() {
+    const bar = document.getElementById('activeFilterBar');
+    if (bar) bar.remove();
+  }
+
+  function showActiveFilterBar() {
+    clearActiveFilterBar();
+    const bar = document.createElement('div');
+    bar.id = 'activeFilterBar';
+    bar.className = 'active-filter-bar';
+    bar.innerHTML = `Showing candidates with <strong>${[...selectedSkills].join(', ')}</strong>&nbsp;&nbsp;<button id="clearFilterBtn">Clear filter ✕</button>`;
+    document.querySelector('.results h2').insertAdjacentElement('afterend', bar);
+    document.getElementById('clearFilterBtn').addEventListener('click', () => {
+      selectedSkills.clear();
+      updateSelection();
+    });
+  }
+
+  function updateSelection() {
+    document.getElementById('resultsSection').classList.remove('hidden');
+     document.getElementById('proceedToTestBtn').classList.remove('hidden');
+    const sliceEls = svg.querySelectorAll('.pie-slice, circle');
+    const legendEls = legend.querySelectorAll('.legend-item');
+
+    skills.forEach((skill, i) => {
+      const isSelected = selectedSkills.has(skill);
+      if (sliceEls[i]) sliceEls[i].classList.toggle('selected', isSelected);
+      if (legendEls[i]) legendEls[i].classList.toggle('selected', isSelected);
+    });
+
+        if (selectedSkills.size === 0) {
+      document.querySelectorAll('.card').forEach(card => card.classList.remove('is-filtered'));
+      clearActiveFilterBar();
+      renderPage(1);
+      return;
+    }
+
+    const requireAll = matchModeToggle.checked;
+    document.querySelectorAll('.card').forEach(card => {
+      const filename = card.dataset.filename;
+      const visible = requireAll
+        ? [...selectedSkills].every(skill => skillData[skill].includes(filename))
+        : [...selectedSkills].some(skill => skillData[skill].includes(filename));
+           card.classList.toggle('is-filtered', !visible);
+    });
+    showActiveFilterBar();
+    renderPage(1);
+  }
+
+  function toggleSkill(skill) {
+    if (selectedSkills.has(skill)) selectedSkills.delete(skill);
+    else selectedSkills.add(skill);
+    updateSelection();
+  }
+
+  matchModeToggle.addEventListener('change', updateSelection);
+
+  if (skills.length === 1) {
+    const skill = skills[0];
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute("cx", cx);
+    circle.setAttribute("cy", cy);
+    circle.setAttribute("r", r);
+    circle.setAttribute("fill", colors[0]);
+    circle.style.cursor = "pointer";
+    circle.addEventListener("click", () => toggleSkill(skill));
+    svg.appendChild(circle);
+  } else {
+    let startAngle = -90;
+    skills.forEach((skill, i) => {
+      const count = skillData[skill].length;
+      const angle = (count / total) * 360;
+      const endAngle = startAngle + angle;
+
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", describeArc(cx, cy, r, startAngle, endAngle));
+      path.setAttribute("fill", colors[i % colors.length]);
+      path.setAttribute("class", "pie-slice");
+      path.style.cursor = "pointer";
+
+      const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+      title.textContent = `${skill} (${count}): ${skillData[skill].join(", ")}`;
+      path.appendChild(title);
+
+      path.addEventListener("click", () => toggleSkill(skill));
+      svg.appendChild(path);
+      startAngle = endAngle;
+    });
+  }
+
+  skills.forEach((skill, i) => {
+    const li = document.createElement("li");
+    li.className = "legend-item";
+    li.innerHTML = `<span class="legend-swatch" style="background:${colors[i % colors.length]}"></span>
+                    <span class="legend-text">${skill} <em>(${skillData[skill].length})</em></span>`;
+    li.addEventListener("click", () => toggleSkill(skill));
+    legend.appendChild(li);
+  });
+
+  const searchInput = document.getElementById('skillSearch');
+  searchInput.addEventListener('input', () => {
+    const query = searchInput.value.trim().toLowerCase();
+    const sliceEls = svg.querySelectorAll('.pie-slice, circle');
+    const legendEls = legend.querySelectorAll('.legend-item');
+    skills.forEach((skill, i) => {
+      const isMatch = skill.toLowerCase().includes(query);
+      if (sliceEls[i]) sliceEls[i].style.opacity = (query === '' || isMatch) ? '1' : '0.12';
+      if (legendEls[i]) legendEls[i].style.display = (query === '' || isMatch) ? '' : 'none';
+    });
+  });
+})();
+
+(function() {
+  const proceedBtn = document.getElementById('proceedToTestBtn');
+  const reviewPanel = document.getElementById('testReviewPanel');
+  const reviewList = document.getElementById('testReviewList');
+  const confirmBtn = document.getElementById('confirmSendBtn');
+  const cancelBtn = document.getElementById('cancelSendBtn');
+
+  function getVisibleCandidates() {
+    const cards = document.querySelectorAll('.card');
+    const visible = [];
+    cards.forEach(card => {
+           if (!card.classList.contains('is-filtered')) {
+        const emailEl = card.querySelector('.detail-row span:last-child');
+        visible.push({
+          filename: card.dataset.filename,
+          email: card.dataset.email || null
+        });
+      }
+    });
+    return visible;
+  }
+
+  // Show the button whenever the results section becomes visible
+  
+  
+    proceedBtn.addEventListener('click', () => {
+  const visible = getVisibleCandidates().filter(c => c.email);
+  if (visible.length === 0) {
+    alert('No candidates with a detected email in the current view.');
+    return;
+  }
+  reviewList.innerHTML = '';
+  visible.forEach(c => {
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <label>
+        <input type="checkbox" checked value="${c.filename}" data-email="${c.email}">
+        ${c.filename} — ${c.email}
+      </label>`;
+    reviewList.appendChild(li);
+  });
+  reviewPanel.classList.remove('hidden');
+  reviewPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }); 
+});
+  
+
+  cancelBtn.addEventListener('click', () => {
+    reviewPanel.classList.add('hidden');
+  });
+
+  confirmBtn.addEventListener('click', () => {
+    const checked = reviewList.querySelectorAll('input[type="checkbox"]:checked');
+    const candidates = Array.from(checked).map(cb => ({
+      filename: cb.value,
+      email: cb.dataset.email
+    }));
+    if (candidates.length === 0) {
+      alert('Select at least one candidate.');
+      return;
+    }
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Sending...';
+
+    fetch('/send_test_invites', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+      candidates,
+      jd_text: document.getElementById('job_description').value,
+      question_set_link: document.getElementById('questionSetLink').value.trim()
+})
+    })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message || 'Invites sent.');
+        reviewPanel.classList.add('hidden');
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Send Invites';
+      })
+      .catch(err => {
+        alert('Failed to send invites.');
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Send Invites';
+      });
+       });
+  })();
+
+(function () {
+  const input = document.getElementById('resumes');
+  const zone = document.getElementById('dropzone');
+  const summary = document.getElementById('fileSummary');
+  if (!input || !zone) return;
+  const okExt = f => /\.(pdf|docx)$/i.test(f.name);
+
+  function setFiles(files) {
+    const dt = new DataTransfer();
+    files.filter(okExt).forEach(f => dt.items.add(f));
+    input.files = dt.files;
+    summary.textContent = dt.files.length
+      ? `${dt.files.length} resume file(s) selected`
+      : 'No PDF or DOCX files found.';
+  }
+
+  // walks a dropped folder, including subfolders
+  function readEntry(entry) {
+    return new Promise(resolve => {
+      if (entry.isFile) {
+        entry.file(f => resolve([f]), () => resolve([]));
+      } else if (entry.isDirectory) {
+        const reader = entry.createReader(), all = [];
+        (function next() {
+          reader.readEntries(async batch => {
+            if (!batch.length) {
+              const nested = await Promise.all(all.map(readEntry));
+              return resolve(nested.flat());
+            }
+            all.push(...batch);
+            next();
+          }, () => resolve([]));
+        })();
+      } else resolve([]);
+    });
+  }
+
+  zone.addEventListener('click', () => input.click());
+  zone.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
+  });
+  input.addEventListener('change', () => setFiles([...input.files]));
+
+  ['dragenter', 'dragover'].forEach(ev =>
+    zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.add('drag'); }));
+  ['dragleave', 'drop'].forEach(ev =>
+    zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.remove('drag'); }));
+
+  zone.addEventListener('drop', async e => {
+    const entries = [...e.dataTransfer.items]
+      .map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+    const files = entries.length
+      ? (await Promise.all(entries.map(readEntry))).flat()
+      : [...e.dataTransfer.files];
+    setFiles(files);
+  });
+})();
+
+document.querySelector('form.panel').addEventListener('submit', e => {
+  if (document.getElementById('resumes').files.length === 0) {
+    e.preventDefault();
+    alert('Please choose resume files or drop a folder.');
+    return;
+  }
+  const btn = e.target.querySelector('button[type=submit]');
+  btn.disabled = true;
+  btn.textContent = 'Scoring... this can take a few minutes';
+});
+
+
+</script>
+
+
+
+</body>
+</html>
