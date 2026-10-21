@@ -1,5 +1,5 @@
 import re
-from sentence_transformers import SentenceTransformer , util
+#from sentence_transformers import SentenceTransformer , util
 from dotenv import load_dotenv
 from openai import OpenAI
 import os 
@@ -67,14 +67,23 @@ def extract_name(resume_text):
     return None
  
 #pre-trained model for embeddings   
-embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+#embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
 #cosine similarity
-def semantic_similarity(resume_text, jd_text):
-    embedding_resume = embedding_model.encode(resume_text)
-    embedding_jd = embedding_model.encode(jd_text)
-    similarity_score = util.cos_sim(embedding_resume, embedding_jd).item()
-    return round(similarity_score * 100, 1)
+#def semantic_similarity(resume_text, jd_text):
+ #   embedding_resume = embedding_model.encode(resume_text)
+  #  embedding_jd = embedding_model.encode(jd_text)
+   # similarity_score = util.cos_sim(embedding_resume, embedding_jd).item()
+    #return round(similarity_score * 100, 1)
+    
+import numpy as np
+from fastembed import TextEmbedding
+
+_embedder = TextEmbedding("sentence-transformers/all-MiniLM-L6-v2")
+
+def embed(texts):
+    vecs = np.array(list(_embedder.embed(texts)))
+    return vecs / np.linalg.norm(vecs, axis=1, keepdims=True)
 
 
 load_dotenv()
@@ -159,8 +168,7 @@ def compare_sce(jd_text, resume_text, threshold=45):
     if not chunks:
         return {"matched": [], "missing": requirements}
 
-    chunk_embeddings = embedding_model.encode(chunks)
-
+    chunk_embeddings = embed(chunks)
     for req in requirements:
         alternatives = [a.strip() for a in req.split(" OR ")]
 
@@ -175,8 +183,8 @@ def compare_sce(jd_text, resume_text, threshold=45):
                 best_score = 100.0
                 break
 
-            alt_embedding = embedding_model.encode(alt)
-            scores = util.cos_sim(alt_embedding, chunk_embeddings)[0]
+            alt_embedding = embed([alt])
+            scores = (alt_embedding @ chunk_embeddings.T)[0]
             alt_score = round(float(scores.max()) * 100, 1)
             if alt_score > best_score:
                 best_score = alt_score
@@ -405,7 +413,6 @@ def parse_and_score(resume_text, jd_text):
     total_requirements = len(sce_result["matched"]) + len(sce_result["missing"])
     requirement_score = round((len(sce_result["matched"]) / total_requirements) * 100, 1) if total_requirements > 0 else 0
 
-    semantic_score = semantic_similarity(resume_text_norm, jd_text_norm)
     trajectory_score = trajectory_result.get("trajectory_score", 0)
     experience_score = experience_result.get("experience_score", 0)
 

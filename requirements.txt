@@ -4,7 +4,9 @@ gunicorn
 pypdf
 pdfplumber
 python-docx
-sentence-transformers
+fastembed
+numpy
+requests
 psycopg2-binary
 yake
 openai

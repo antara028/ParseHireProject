@@ -18,6 +18,7 @@ from database import (
 )
 from werkzeug.utils import secure_filename
 from splitter import split_pdf_into_resumes
+import requests 
 
 
 
@@ -45,14 +46,15 @@ PASS_MARK = 2  # questions fully correct out of 3
 
 
 def send_email(to_email, subject, body):
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = EMAIL_ADDRESS
-    msg["To"] = to_email
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15) as smtp:
-        smtp.login(EMAIL_ADDRESS, EMAIL_APP_PASSWORD)
-        smtp.send_message(msg)
-
+    r = requests.post(
+        "https://api.brevo.com/v3/smtp/email",
+        headers={"api-key": os.getenv("BREVO_API_KEY"), "accept": "application/json"},
+        json={"sender": {"email": EMAIL_ADDRESS, "name": "Hiring Team"},
+              "to": [{"email": to_email}], "subject": subject, "textContent": body},
+        timeout=15,
+    )
+    r.raise_for_status()
+    
 @app.route("/")
 def home():
     if "employer_email" not in session:
