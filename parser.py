@@ -66,15 +66,7 @@ def extract_name(resume_text):
         return candidate.title() if candidate.isupper() else candidate
     return None
  
-#pre-trained model for embeddings   
-#embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
-#cosine similarity
-#def semantic_similarity(resume_text, jd_text):
- #   embedding_resume = embedding_model.encode(resume_text)
-  #  embedding_jd = embedding_model.encode(jd_text)
-   # similarity_score = util.cos_sim(embedding_resume, embedding_jd).item()
-    #return round(similarity_score * 100, 1)
     
 import numpy as np
 from fastembed import TextEmbedding
@@ -170,7 +162,7 @@ def compare_sce(jd_text, resume_text, threshold=45):
 
     chunk_embeddings = embed(chunks)
     for req in requirements:
-        alternatives = [a.strip() for a in req.split(" OR ")]
+        alternatives = [a.strip() for a in req.split(" OR ")] #python OR java suppose
 
         best_alt = None
         best_score = 0
