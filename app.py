@@ -348,6 +348,10 @@ def assessment_submit(token):
     save_assessment_result(token, score, passed, status, details)
     return jsonify(ok=True)
 
+@app.route('/manifest.webmanifest')
+def serve_manifest():
+    return send_from_directory('static', 'manifest.webmanifest', mimetype='application/manifest+json')
+
 
 @app.route("/sw.js")
 def service_worker():
