@@ -1,13 +1,15 @@
 {
   "name": "ParseHire",
   "short_name": "ParseHire",
+  "description": "Score resumes against a job description and send tests to the best candidates.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#faf1e7",
   "theme_color": "#b6552f",
-    "icons": [
-    {"src": "/static/logo.jpg", "sizes": "192x192", "type": "image/jpeg", "purpose": "any"},
-    {"src": "/static/logo.jpg", "sizes": "512x512", "type": "image/jpeg", "purpose": "any"}
+  "icons": [
+    {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
   ]
 }
