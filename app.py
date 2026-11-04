@@ -348,15 +348,25 @@ def assessment_submit(token):
     save_assessment_result(token, score, passed, status, details)
     return jsonify(ok=True)
 
-@app.route('/manifest.webmanifest')
-def serve_manifest():
-    return send_from_directory('static', 'manifest.webmanifest', mimetype='application/manifest+json')
+
 
 
 @app.route("/sw.js")
 def service_worker():
     resp = app.send_static_file("sw.js")
     resp.headers["Service-Worker-Allowed"] = "/"
+    return resp
+
+@app.after_request
+def add_pwa_tags(resp):
+    if resp.mimetype == "text/html" and not resp.direct_passthrough:
+        html = resp.get_data(as_text=True)
+        if "</head>" in html and "manifest.webmanifest" not in html:
+            tags = ('<link rel="manifest" href="/static/manifest.webmanifest">'
+                    '<meta name="theme-color" content="#b6552f">'
+                    '<script>if("serviceWorker" in navigator)'
+                    'navigator.serviceWorker.register("/sw.js")</script>')
+            resp.set_data(html.replace("</head>", tags + "</head>", 1))
     return resp
 
 if __name__ == "__main__":
